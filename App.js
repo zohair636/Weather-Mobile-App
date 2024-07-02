@@ -1,20 +1,18 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { View, Text, SafeAreaView } from "react-native";
+import React from "react";
+import Weather from "./src/components/Weather/Weather";
+import { LinearGradient } from "expo-linear-gradient";
+import styles from "./src/components/StyleSheet/Weather";
 
-export default function App() {
+const App = () => {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <LinearGradient
+      colors={["#005C97", "#005C97", "#363795"]}
+      style={styles.weatherBgContainer}
+    >
+      <Weather />
+    </LinearGradient>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App;
