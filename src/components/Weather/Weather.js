@@ -6,6 +6,7 @@ import {
   Pressable,
   Image,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import styles from "../StyleSheet/Weather";
@@ -15,9 +16,6 @@ import { Feather } from "@expo/vector-icons";
 import { FontAwesome } from "@expo/vector-icons";
 import { FontAwesome5 } from "@expo/vector-icons";
 import axios from "axios";
-
-BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
-API_KEY = "8be90a5551b0300dfcb0192ad3a953fb";
 
 const Weather = () => {
   const [city, setCity] = useState("");
@@ -32,17 +30,16 @@ const Weather = () => {
   const [currentUv, setCurrentUv] = useState("");
   const [forecastData, setForecastData] = useState([]);
   const [forecastDay, setForecastDay] = useState("");
+  const [forecastIcon, setForecastIcon] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const date = new Date();
-  const FORECAST_BASE_URL = "https://api.weatherapi.com/v1/forecast.json";
-  const FORECAST_API_KEY = "38f27115a4cc4c7792c175016230311";
 
   const handleCityChange = (text) => {
     setCity(text);
   };
 
   const WeatherAPI = async () => {
-    const apiUrl = `${BASE_URL}?q=${city}&appid=${API_KEY}&units=metric`;
+    const apiUrl = `${process.env.EXPO_PUBLIC_BASE_URL}?q=${city}&appid=${process.env.EXPO_PUBLIC_API_KEY}&units=metric`;
 
     const response = await axios.get(apiUrl);
     const temp = response.data.main.temp_max;
@@ -70,46 +67,56 @@ const Weather = () => {
   };
 
   const forecastAPI = async () => {
-    const apiUrl = `${FORECAST_BASE_URL}?key=${FORECAST_API_KEY}&q=${city}&days=7&aqi=yes&alerts=no`;
+    try {
+      const apiUrl = `${process.env.EXPO_PUBLIC_FORECAST_BASE_URL}?key=${process.env.EXPO_PUBLIC_FORECAST_API_KEY}&q=${city}&days=7&aqi=yes&alerts=no`;
+      setIsLoading(true);
+      const response = await axios.get(apiUrl);
+      const humidity = response.data.current.humidity;
+      const uv = response.data.current.uv;
+      const temp = response.data.current.feelslike_c;
+      const weather = response.data.current.condition.text;
+      const wind = response.data.current.wind_kph;
+      const forecast = response.data.forecast.forecastday;
+      const forecastIcons = `https:${response.data.current.condition.icon}`;
+      setForecastIcon(forecastIcons);
 
-    const response = await axios.get(apiUrl);
-    const humidity = response.data.current.humidity;
-    const uv = response.data.current.uv;
-    const temp = response.data.current.feelslike_c;
-    const weather = response.data.current.condition.text;
-    const wind = response.data.current.wind_kph;
-    const forecast = response.data.forecast.forecastday;
-    const forecastIcons = response.data.current.condition.icon;
-    console.log(forecastIcons)
-    const getForecast = [];
-    const getHours = [];
-    const getDay = [];
-    for (const data of forecast) {
-      const avgTemp = data.day.avgtemp_c;
-      const forecastDay = data.day.condition.text;
-      const forecastTime = data.hour;
+      const getForecast = [];
+      const getHours = [];
+      const getDay = [];
+      for (const data of forecast) {
+        const avgTemp = data.day.avgtemp_c;
+        const forecastDay = data.day.condition.text;
+        const forecastTime = data.hour;
 
-      getForecast.push(avgTemp);
-      getHours.push(forecastTime);
-      getDay.push(forecastDay);
+        getForecast.push(avgTemp);
+        getHours.push(forecastTime);
+        getDay.push(forecastDay);
+      }
+      setCurrentHumidity(humidity);
+      setCurrentUv(uv);
+      setTemperature(temp);
+      setCurrentWeather(weather);
+      setCurrentWind(wind);
+      setForecastData(getForecast);
+      setForecastDay(getDay);
+      
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(true)
-    setCurrentHumidity(humidity);
-    setCurrentUv(uv);
-    setTemperature(temp);
-    setCurrentWeather(weather);
-    setCurrentWind(wind);
-    setForecastData(getForecast);
-    setForecastDay(getDay);
   };
 
   const renderForecast = ({ item, index }) => {
     return (
-      <View key={index} style={{ justifyContent: "center", alignItems: "center" }}>
+      <View
+        key={item?.id}
+        style={{ justifyContent: "center", alignItems: "center" }}
+      >
         <View style={styles.cloudsSetting}>
           <Image
             source={{
-              uri: item.icon,
+              uri: forecastIcon,
             }}
             width={45}
             height={45}
@@ -117,7 +124,9 @@ const Weather = () => {
           {forecastData.length > 0 ? (
             <View>
               <Text style={styles.cloudDataTxt}>{item.text}</Text>
-            <Text style={styles.cloudDataTxt}>{parseFloat(item).toPrecision(2)}&deg;</Text>
+              <Text style={styles.cloudDataTxt}>
+                {parseFloat(item).toPrecision(2)}&deg;
+              </Text>
             </View>
           ) : (
             <Text style={styles.cloudDataTxt}>0&deg;</Text>
@@ -162,7 +171,11 @@ const Weather = () => {
           placeholderTextColor={"#fff"}
         />
         <Pressable style={styles.submitBtn} onPress={forecastAPI}>
+        {isLoading ? (
+        <ActivityIndicator size={'small'} />
+        ) : (
           <Text style={styles.submitBtnTxt}>Submit</Text>
+        )}
         </Pressable>
         <View style={{ flexDirection: "row" }}>
           {!temperature ? (
@@ -211,7 +224,9 @@ const Weather = () => {
           <View style={{ ...styles.humidity_UV_Setting }}>
             <FontAwesome5 name="wind" size={24} color="white" />
             {!currentWind ? (
-              <Text style={{ ...styles.humidity_UV_Txt, paddingLeft: 10 }}>0km</Text>
+              <Text style={{ ...styles.humidity_UV_Txt, paddingLeft: 10 }}>
+                0km
+              </Text>
             ) : (
               <Text style={{ ...styles.humidity_UV_Txt, paddingLeft: 10 }}>
                 {currentWind}km
@@ -232,12 +247,16 @@ const Weather = () => {
           </Text>
           <View style={styles.endLine} />
         </View>
+        {isLoading ? (
+        <ActivityIndicator size={'small'} />
+        ) : (
         <FlatList
           horizontal
           data={forecastData}
           renderItem={renderForecast}
           keyExtractor={(item) => item.id}
         />
+        )}
       </View>
     </SafeAreaView>
   );
